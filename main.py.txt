@@ -1,0 +1,87 @@
+from catalog import load_books, save_books, add_book, search_books
+from patron import load_patrons, save_patrons, register_patron
+from circulation import checkout_book, return_book, list_patron_loans
+from storage import ensure_data_paths, load_state, save_state
+DATA_DIR = "data"
+
+ensure_data_paths(DATA_DIR)
+
+books, patrons, loans = load_state(DATA_DIR)
+def show_menu():
+    print("\n--- Library Management System ---")
+    print("1. Add Book")
+    print("2. Search Book")
+    print("3. Register Patron")
+    print("4. Checkout Book")
+    print("5. Return Book")
+    print("6. List Patron Loans")
+    print("0. Exit")
+while True:
+    show_menu()
+    choice = input("Select an option: ")
+
+    if choice == "1":
+        book = {
+            "isbn": input("ISBN: "),
+            "title": input("Title: "),
+            "author": input("Author: "),
+            "genre": input("Genre: "),
+            "publication_year": int(input("Publication Year: ")),
+            "copies_owned": int(input("Copies Owned: ")),
+            "copies_available": int(input("Copies Available: "))
+        }
+        add_book(books, book)
+        save_state(DATA_DIR, books, patrons, loans)
+        print("Book added.")
+
+    elif choice == "2":
+        keyword = input("Search keyword: ")
+        results = search_books(books, keyword)
+        for b in results:
+            print(b)
+
+    elif choice == "3":
+        patron = {
+            "library_id": input("Library ID: "),
+            "name": input("Name: "),
+            "password": input("Password: "),
+            "borrow_limit": 3,
+            "fine": 0
+        }
+        register_patron(patrons, patron)
+        save_state(DATA_DIR, books, patrons, loans)
+        print("Patron registered.")
+
+    elif choice == "4":
+        isbn = input("ISBN: ")
+        library_id = input("Library ID: ")
+        loan = checkout_book(books, patrons, loans, isbn, library_id, 14)
+        if loan:
+            save_state(DATA_DIR, books, patrons, loans)
+            print("Book checked out.")
+        else:
+            print("Checkout failed.")
+
+    elif choice == "5":
+        loan_id = input("Loan ID: ")
+        return_date = input("Return date (YYYY-MM-DD): ")
+        result = return_book(books, patrons, loans, loan_id, return_date)
+        if result:
+            save_state(DATA_DIR, books, patrons, loans)
+            print("Book returned.")
+        else:
+            print("Return failed.")
+
+    elif choice == "6":
+        library_id = input("Library ID: ")
+        patron_loans = list_patron_loans(loans, library_id)
+        for loan in patron_loans:
+            print(loan)
+
+    elif choice == "0":
+        save_state(DATA_DIR, books, patrons, loans)
+        print("Exiting...")
+        break
+
+    else:
+        print("Invalid choice.")

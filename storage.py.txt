@@ -1,0 +1,58 @@
+import os
+import json
+import shutil
+from datetime import datetime
+def ensure_data_paths(base_dir: str) -> None:
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
+def load_state(base_dir: str):
+    books_path = os.path.join(base_dir, "books.json")
+    patrons_path = os.path.join(base_dir, "patrons.json")
+    loans_path = os.path.join(base_dir, "loans.json")
+
+    def load_file(path):
+        if not os.path.exists(path):
+            return []
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    books = load_file(books_path)
+    patrons = load_file(patrons_path)
+    loans = load_file(loans_path)
+
+    return books, patrons, loans
+def save_state(base_dir: str, books: list, patrons: list, loans: list) -> None:
+    with open(os.path.join(base_dir, "books.json"), "w", encoding="utf-8") as f:
+        json.dump(books, f, indent=4, ensure_ascii=False)
+
+    with open(os.path.join(base_dir, "patrons.json"), "w", encoding="utf-8") as f:
+        json.dump(patrons, f, indent=4, ensure_ascii=False)
+
+    with open(os.path.join(base_dir, "loans.json"), "w", encoding="utf-8") as f:
+        json.dump(loans, f, indent=4, ensure_ascii=False)
+def backup_state(base_dir: str, backup_dir: str) -> list:
+    if not os.path.exists(backup_dir):
+        os.makedirs(backup_dir)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_path = os.path.join(backup_dir, f"backup_{timestamp}")
+    os.makedirs(backup_path)
+
+    copied_files = []
+
+    for filename in ["books.json", "patrons.json", "loans.json"]:
+        src = os.path.join(base_dir, filename)
+        if os.path.exists(src):
+            dst = os.path.join(backup_path, filename)
+            shutil.copy(src, dst)
+            copied_files.append(dst)
+
+    return copied_files
+def validate_catalog_schema(books: list) -> bool:
+    required_keys = {"isbn", "title", "author", "genre", "publication_year"}
+
+    for book in books:
+        if not required_keys.issubset(book.keys()):
+            return False
+
+    return True

@@ -1,0 +1,82 @@
+from datetime import datetime, timedelta
+import uuid
+def checkout_book(books: list, patrons: list, loans: list,
+                  isbn: str, library_id: str, loan_period_days: int) -> dict:
+
+    # kitabı bul
+    book = None
+    for b in books:
+        if b.get("isbn") == isbn and b.get("copies_available", 0) > 0:
+            book = b
+            break
+
+    if book is None:
+        return {}
+
+    # patronu bul
+    patron = None
+    for p in patrons:
+        if p.get("library_id") == library_id:
+            patron = p
+            break
+
+    if patron is None:
+        return {}
+
+    # ödünç alma limiti kontrolü
+    current_loans = [l for l in loans if l["library_id"] == library_id and not l["returned"]]
+    if len(current_loans) >= patron.get("borrow_limit", 3):
+        return {}
+
+    # loan oluştur
+    loan = {
+        "loan_id": str(uuid.uuid4()),
+        "isbn": isbn,
+        "library_id": library_id,
+        "checkout_date": datetime.now().strftime("%Y-%m-%d"),
+        "due_date": (datetime.now() + timedelta(days=loan_period_days)).strftime("%Y-%m-%d"),
+        "returned": False
+    }
+
+    loans.append(loan)
+    book["copies_available"] -= 1
+
+    return loan
+def return_book(books: list, patrons: list, loans: list,
+                loan_id: str, return_date: str) -> dict:
+
+    for loan in loans:
+        if loan["loan_id"] == loan_id and not loan["returned"]:
+            loan["returned"] = True
+            loan["return_date"] = return_date
+
+            # kitabın kopyasını geri artır
+            for book in books:
+                if book.get("isbn") == loan["isbn"]:
+                    book["copies_available"] += 1
+                    break
+
+            return loan
+
+    return {}
+def renew_loan(loans: list, loan_id: str, extension_days: int) -> dict:
+    for loan in loans:
+        if loan["loan_id"] == loan_id and not loan["returned"]:
+            due_date = datetime.strptime(loan["due_date"], "%Y-%m-%d")
+            new_due_date = due_date + timedelta(days=extension_days)
+            loan["due_date"] = new_due_date.strftime("%Y-%m-%d")
+            return loan
+
+    return {}
+def apply_fine(patrons: list, library_id: str, amount: float) -> dict:
+    for patron in patrons:
+        if patron.get("library_id") == library_id:
+            patron["fine"] = patron.get("fine", 0) + amount
+            return patron
+
+    return {}
+def list_patron_loans(loans: list, library_id: str) -> list:
+    return [
+        loan for loan in loans
+        if loan["library_id"] == library_id and not loan["returned"]
+    ]

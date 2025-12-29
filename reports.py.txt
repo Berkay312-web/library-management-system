@@ -1,0 +1,49 @@
+from datetime import datetime
+import csv
+def overdue_report(loans: list, current_date: str) -> list:
+    today = datetime.strptime(current_date, "%Y-%m-%d")
+    overdue = []
+
+    for loan in loans:
+        if not loan.get("returned"):
+            due_date = datetime.strptime(loan["due_date"], "%Y-%m-%d")
+            if due_date < today:
+                overdue.append(loan)
+
+    return overdue
+def fines_summary(patrons: list) -> dict:
+    summary = {}
+
+    for patron in patrons:
+        summary[patron["library_id"]] = patron.get("fine", 0)
+
+    return summary
+def circulation_stats(loans: list, books: list) -> dict:
+    stats = {}
+
+    for loan in loans:
+        isbn = loan["isbn"]
+        stats[isbn] = stats.get(isbn, 0) + 1
+
+    result = {}
+    for book in books:
+        result[book["title"]] = stats.get(book["isbn"], 0)
+
+    return result
+def export_report(report, filename: str) -> str:
+    with open(filename, "w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+
+        if isinstance(report, dict):
+            writer.writerow(["Key", "Value"])
+            for key, value in report.items():
+                writer.writerow([key, value])
+
+        elif isinstance(report, list):
+            if len(report) > 0 and isinstance(report[0], dict):
+                headers = report[0].keys()
+                writer.writerow(headers)
+                for item in report:
+                    writer.writerow(item.values())
+
+    return filename
